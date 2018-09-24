@@ -1,0 +1,15 @@
+# Habitus build file
+---
+build:
+  version: 2016-03-14
+  steps:
+    dex-build: 
+      name: dex-build
+      dockerfile: Dockerfile.dex-build
+      artifacts:
+        - /go/src/github.com/dexidp/dex/cmd/dex/dex:.
+    dex-package:
+      name: dex-package
+      dockerfile: Dockerfile.dex-package
+      
+

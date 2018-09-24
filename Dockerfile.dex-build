@@ -1,0 +1,6 @@
+FROM golang:1.9.2
+
+RUN go get -u github.com/golang/dep/cmd/dep && \
+    go get github.com/dexidp/dex
+
+RUN cd /go/src/github.com/dexidp/dex/cmd/dex && go build
