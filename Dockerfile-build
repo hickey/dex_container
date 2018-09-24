@@ -1,7 +1,7 @@
 
 FROM golang:1.9.2
 
-RUN go get github.com/coreos/dex && \
-    cd $GOPATH/src/github.com/coreos/dex && \
+RUN go get github.com/dexidp/dex && \
+    cd $GOPATH/src/github.com/dexidp/dex && \
     make
 
