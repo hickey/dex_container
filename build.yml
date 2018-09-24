@@ -9,7 +9,8 @@ build:
       artifacts:
         - /go/src/github.com/dexidp/dex/cmd/dex/dex:.
     dex-package:
-      name: dex-package
+      name: dex
       dockerfile: Dockerfile.dex-package
-      
+      depends_on: 
+        - dex-build
 
