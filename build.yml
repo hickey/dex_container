@@ -13,4 +13,10 @@ build:
       dockerfile: Dockerfile.dex-package
       depends_on: 
         - dex-build
-
+    
+    auth-crosscompile:
+      name: kubeauth
+      dockerfile: Dockerfile.auth-build
+      artifacts:
+        - /go/src/github.com/hickey/kubeauth/compiled:.
+        

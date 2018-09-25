@@ -1,0 +1,6 @@
+FROM golang-1.9.2
+
+RUN go get github.com/hickey/k8s-auth && \
+    cd /go/src/github.com/hickey/kubeauth && \
+    gox -osarch="darwin/386 darwin/amd64 linux/386 linux/amd64 windows/386 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
+    
