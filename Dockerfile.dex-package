@@ -1,4 +1,8 @@
-FROM golang:1.9.2
+FROM golang:1.10
 
+ADD ./web /usr/src/app/web
 ADD ./dex /usr/bin
 RUN chmod 755 /usr/bin/dex
+
+WORKDIR /usr/src/app
+ENTRYPOINT ["/usr/bin/dex", "serve", "dex.yaml"]
