@@ -1,0 +1,17 @@
+FROM golang:1.10
+
+ENV CGO_ENABLED=1
+
+RUN go get github.com/dexidp/dex
+RUN cd /go/src/github.com/dexidp/dex/cmd/dex && go build
+
+FROM golang:1.10
+
+RUN apt-get -y update && \
+    apt-get -y install ca-certificates
+WORKDIR /dex
+ADD ./web web
+COPY --from=0 /go/src/github.com/dexidp/dex/cmd/dex/dex /usr/local/bin
+RUN chmod 755 /usr/local/bin/dex
+
+CMD ["/usr/local/bin/dex", "serve", "dex.yaml"]
