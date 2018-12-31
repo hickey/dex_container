@@ -1,0 +1,11 @@
+FROM golang:1.11-alpine
+
+ENV CGO_ENABLED=0
+
+RUN apk add git && \
+    go get -u github.com/golang/dep/cmd/dep && \
+    go get -u github.com/mitchellh/gox && \
+    go get github.com/hickey/kubeauth && \
+    cd /go/src/github.com/hickey/kubeauth && \
+    dep ensure && \
+    gox -ldflags="-X main.VERSION=1" -osarch="darwin/386 darwin/amd64 linux/386 linux/amd64 windows/386 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"

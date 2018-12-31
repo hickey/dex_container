@@ -3,20 +3,13 @@
 build:
   version: 2016-03-14
   steps:
-    dex-build: 
-      name: dex-build
-      dockerfile: Dockerfile.dex-build
-      artifacts:
-        - /go/src/github.com/dexidp/dex/cmd/dex/dex:.
-    dex-package:
+    dex-build:
       name: dex
-      dockerfile: Dockerfile.dex-package
-      depends_on: 
-        - dex-build
-    
+      dockerfile: Dockerfile.dex
+
     auth-crosscompile:
       name: kubeauth
-      dockerfile: Dockerfile.auth-build
+      dockerfile: Dockerfile.kubeauth
       artifacts:
         - /go/src/github.com/hickey/kubeauth/compiled:.
-        
+
