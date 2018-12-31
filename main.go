@@ -121,7 +121,7 @@ func cmd() *cobra.Command {
         rootCAs   string
     )
     c := cobra.Command{
-        Use:   "k8s-auth",
+        Use:   "kubeauth",
         Short: "Authenticates users against OIDC and writes the required kubeconfig.",
         Long:  "",
         RunE: func(cmd *cobra.Command, args []string) error {
