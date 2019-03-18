@@ -6,11 +6,11 @@ ENV CGO_ENABLED=1
 
 RUN apk add git gcc libc-dev
 RUN mkdir -p /go/src/github.com/dexidp && cd /go/src/github.com/dexidp && \
-    git clone https://github.com/dexidp/dex.git
+    git clone https://github.com/hickey/dex.git  # git clone https://github.com/dexidp/dex.git
 RUN cd /go/src/github.com/dexidp/dex && \
-    git checkout -b working v${DEX_VERSION}
-RUN go get -u github.com/golang/dep/cmd/dep && \
-    cd /go/src/github.com/dexidp/dex && dep init && dep ensure
+    git checkout -b working origin/refresh-tokens-rebased  # git checkout -b working v${DEX_VERSION}
+# RUN go get -u github.com/golang/dep/cmd/dep && \
+#     cd /go/src/github.com/dexidp/dex && dep init && dep ensure
 RUN cd /go/src/github.com/dexidp/dex/cmd/dex && go build
 
 
