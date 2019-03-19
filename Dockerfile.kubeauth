@@ -7,5 +7,5 @@ RUN apk add git && \
     go get -u github.com/mitchellh/gox && \
     go get github.com/hickey/kubeauth && \
     cd /go/src/github.com/hickey/kubeauth && \
-    dep ensure && \
+    dep init && \
     gox -ldflags="-X main.VERSION=1" -osarch="darwin/386 darwin/amd64 linux/386 linux/amd64 windows/386 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
