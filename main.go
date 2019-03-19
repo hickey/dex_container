@@ -411,7 +411,8 @@ func updateKubeConfig(IDToken string, refreshToken string, claims claim, a *app)
         },
     }
 
-    config.AuthInfos[claims.Email] = authInfo
+    user_entry := fmt.Sprintf("%s@%s", a.name, a.clientID)
+    config.AuthInfos[user_entry] = authInfo
 
     fmt.Printf("Writing config to %s\n", outputFilename)
     err = k8s_client.WriteToFile(*config, outputFilename)
