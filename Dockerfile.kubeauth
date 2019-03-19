@@ -3,9 +3,10 @@ FROM golang:1.11-alpine
 ENV CGO_ENABLED=0
 
 RUN apk add git && \
-    go get -u github.com/golang/dep/cmd/dep && \
-    go get -u github.com/mitchellh/gox && \
-    go get github.com/hickey/kubeauth && \
+    go get -u github.com/golang/dep/cmd/dep && echo "Downloaded dep" && \
+    go get -u github.com/mitchellh/gox && echo "Downloaded gox" && \
+    go get github.com/hickey/kubeauth && echo "Downloaded kubeauth" && \
     cd /go/src/github.com/hickey/kubeauth && \
+    git co develop && \
     dep init && \
     gox -ldflags="-X main.VERSION=1" -osarch="darwin/386 darwin/amd64 linux/386 linux/amd64 windows/386 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
