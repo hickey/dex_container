@@ -411,7 +411,7 @@ func updateKubeConfig(IDToken string, refreshToken string, claims claim, a *app)
         },
     }
 
-    user_entry := fmt.Sprintf("%s@%s", a.name, a.clientID)
+    user_entry := fmt.Sprintf("%s@%s", claims.Name, a.clientID)
     config.AuthInfos[user_entry] = authInfo
 
     fmt.Printf("Writing config to %s\n", outputFilename)
