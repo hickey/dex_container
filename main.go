@@ -68,11 +68,11 @@ func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
     tlsConfig := tls.Config{RootCAs: x509.NewCertPool()}
     rootCABytes, err := ioutil.ReadFile(rootCAs)
     if err != nil {
-        raven.CaptureError(error.New(fmt.Sprintf("failed to read root-ca: %v", err)), nil)
+        raven.CaptureError(errors.Errorf("failed to read root-ca: %v", err), nil)
         return nil, fmt.Errorf("failed to read root-ca: %v", err)
     }
     if !tlsConfig.RootCAs.AppendCertsFromPEM(rootCABytes) {
-        raven.CaptureError(error.New(fmt.Sprintf("no certs found in root CA file %q", rootCAs)), nil)
+        raven.CaptureError(errors.Errorf("no certs found in root CA file %q", rootCAs), nil)
         return nil, fmt.Errorf("no certs found in root CA file %q", rootCAs)
     }
     return &http.Client{
@@ -133,12 +133,12 @@ func cmd() *cobra.Command {
         RunE: func(cmd *cobra.Command, args []string) error {
             u, err := url.Parse(a.redirectURI)
             if err != nil {
-                raven.CaptureError(error.New(fmt.Sprintf("parse redirect-uri: %v", err)), nil)
+                raven.CaptureError(errors.Errorf("parse redirect-uri: %v", err), nil)
                 return fmt.Errorf("parse redirect-uri: %v", err)
             }
             listenURL, err := url.Parse(listen)
             if err != nil {
-                raven.CaptureError(error.New(fmt.Sprintf("parse listen address: %v", err)), nil)
+                raven.CaptureError(errors.Errorf("parse listen address: %v", err), nil)
                 return fmt.Errorf("parse listen address: %v", err)
             }
 
@@ -167,7 +167,7 @@ func cmd() *cobra.Command {
             ctx := oidc.ClientContext(context.Background(), a.client)
             provider, err := oidc.NewProvider(ctx, issuerURL)
             if err != nil {
-                raven.CaptureErrorAndWait(error.New(fmt.Sprintf("Failed to query provider %q: %v", issuerURL, err)), nil)
+                raven.CaptureErrorAndWait(errors.Errorf("Failed to query provider %q: %v", issuerURL, err), nil)
                 return fmt.Errorf("Failed to query provider %q: %v", issuerURL, err)
             }
 
@@ -178,7 +178,7 @@ func cmd() *cobra.Command {
                 ScopesSupported []string `json:"scopes_supported"`
             }
             if err := provider.Claims(&s); err != nil {
-                raven.CaptureError(error.New(fmt.Sprintf("Failed to parse provider scopes_supported: %v", err), nil))
+                raven.CaptureError(errors.Errorf("Failed to parse provider scopes_supported: %v", err), nil)
                 return fmt.Errorf("Failed to parse provider scopes_supported: %v", err)
             }
 
@@ -218,7 +218,7 @@ func cmd() *cobra.Command {
                 go a.waitShutdown()
                 return http.ListenAndServeTLS(listenURL.Host, tlsCert, tlsKey, nil)
             default:
-                raven.CaptureError(error.New(fmt.Sprintf("listen address %q is not using http or https", listen)), nil)
+                raven.CaptureError(error.Errorf("listen address %q is not using http or https", listen), nil)
                 return fmt.Errorf("listen address %q is not using http or https", listen)
             }
         },
@@ -292,18 +292,18 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
     case "GET":
         // Authorization redirect callback from OAuth2 auth flow.
         if errMsg := r.FormValue("error"); errMsg != "" {
-            raven.CaptureError(error.New(errMsg), nil)
+            raven.CaptureError(errors.New(errMsg), nil)
             http.Error(w, errMsg+": "+r.FormValue("error_description"), http.StatusBadRequest)
             return
         }
         code := r.FormValue("code")
         if code == "" {
-            raven.CaptureError(error.New(fmt.Sprintf("no code in request: %q", r.Form)), nil)
+            raven.CaptureError(errors.Errorf("no code in request: %q", r.Form), nil)
             http.Error(w, fmt.Sprintf("no code in request: %q", r.Form), http.StatusBadRequest)
             return
         }
         if state := r.FormValue("state"); state != exampleAppState {
-            raven.CaptureError(error.New(fmt.Sprintf("expected state %q got %q", exampleAppState, state)), nil)
+            raven.CaptureError(errors.Errorf("expected state %q got %q", exampleAppState, state), nil)
             http.Error(w, fmt.Sprintf("expected state %q got %q", exampleAppState, state), http.StatusBadRequest)
             return
         }
@@ -312,7 +312,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         // Form request from frontend to refresh a token.
         refresh := r.FormValue("refresh_token")
         if refresh == "" {
-            raven.CaptureError(error.New("no refresh_token in response"), nil)
+            raven.CaptureError(errors.New("no refresh_token in response"), nil)
             http.Error(w, fmt.Sprintf("no refresh_token in request: %q", r.Form), http.StatusBadRequest)
             return
         }
@@ -322,20 +322,20 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         }
         token, err = oauth2Config.TokenSource(ctx, t).Token()
     default:
-        raven.CaptureError(error.New("method not implemented"), map[string]string{"method": r.Method})
+        raven.CaptureError(errors.New("method not implemented"), map[string]string{"method": r.Method})
         http.Error(w, fmt.Sprintf("method not implemented: %s", r.Method), http.StatusBadRequest)
         return
     }
 
     if err != nil {
-        raven.CaptureError(error.New("failed to get token"), nil)
+        raven.CaptureError(errors.New("failed to get token"), nil)
         http.Error(w, fmt.Sprintf("failed to get token: %v", err), http.StatusInternalServerError)
         return
     }
 
     rawIDToken, ok := token.Extra("id_token").(string)
     if !ok {
-        raven.CaptureError(error.New("no id_token in response"), nil)
+        raven.CaptureError(errors.New("no id_token in response"), nil)
         http.Error(w, "no id_token in token response", http.StatusInternalServerError)
         return
     }
