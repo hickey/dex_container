@@ -19,6 +19,7 @@ import (
     "runtime"
     "syscall"
     "time"
+    "errors"
 
     k8s_client "k8s.io/client-go/tools/clientcmd"
     k8s_api "k8s.io/client-go/tools/clientcmd/api"
