@@ -298,7 +298,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         }
         code := r.FormValue("code")
         if code == "" {
-            raven.CaptureError(error{fmt.Sprintf("no code in request: %q", r.Form), nil)
+            raven.CaptureError(error{fmt.Sprintf("no code in request: %q", r.Form)}, nil)
             http.Error(w, fmt.Sprintf("no code in request: %q", r.Form), http.StatusBadRequest)
             return
         }
