@@ -298,12 +298,12 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         }
         code := r.FormValue("code")
         if code == "" {
-            raven.CaptureError(error{fmt.Sprintf("no code in request: %q", r.Form)}, nil)
+            raven.CaptureError(error.Error(fmt.Sprintf("no code in request: %q", r.Form)), nil)
             http.Error(w, fmt.Sprintf("no code in request: %q", r.Form), http.StatusBadRequest)
             return
         }
         if state := r.FormValue("state"); state != exampleAppState {
-            raven.CaptureError(error{fmt.Sprintf("expected state %q got %q", exampleAppState, state)}, nil)
+            raven.CaptureError(error.Error(fmt.Sprintf("expected state %q got %q", exampleAppState, state)), nil)
             http.Error(w, fmt.Sprintf("expected state %q got %q", exampleAppState, state), http.StatusBadRequest)
             return
         }
@@ -312,7 +312,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         // Form request from frontend to refresh a token.
         refresh := r.FormValue("refresh_token")
         if refresh == "" {
-            raven.CaptureError(error{"no refresh_token in response"}, nil)
+            raven.CaptureError(error.Error("no refresh_token in response"), nil)
             http.Error(w, fmt.Sprintf("no refresh_token in request: %q", r.Form), http.StatusBadRequest)
             return
         }
@@ -322,20 +322,20 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         }
         token, err = oauth2Config.TokenSource(ctx, t).Token()
     default:
-        raven.CaptureError(error{"method not implemented"}, map[string]string{"method": r.Method})
+        raven.CaptureError(error.Error("method not implemented"), map[string]string{"method": r.Method})
         http.Error(w, fmt.Sprintf("method not implemented: %s", r.Method), http.StatusBadRequest)
         return
     }
 
     if err != nil {
-        raven.CaptureError(error{"failed to get token"}, nil)
+        raven.CaptureError(error.Error("failed to get token"), nil)
         http.Error(w, fmt.Sprintf("failed to get token: %v", err), http.StatusInternalServerError)
         return
     }
 
     rawIDToken, ok := token.Extra("id_token").(string)
     if !ok {
-        raven.CaptureError(error{"no id_token in response"}, nil)
+        raven.CaptureError(error.Error("no id_token in response"), nil)
         http.Error(w, "no id_token in token response", http.StatusInternalServerError)
         return
     }
