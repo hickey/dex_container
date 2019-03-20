@@ -355,7 +355,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
     var m claim
     err = json.Unmarshal(claims, &m)
     if err != nil {
-        raven.CaptureError(err, map[string]string{"claims": claims})
+        raven.CaptureError(err, map[string]string{"claims": fmt.Sprintf("%v", claims)})
         http.Error(w, fmt.Sprintf("Failed to read claims: %v", err), http.StatusInternalServerError)
         go func() {
             a.shutdownChan <- true
@@ -365,7 +365,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
 
     err = updateKubeConfigUserToken(rawIDToken, token.RefreshToken, m, a)
     if err != nil {
-        raven.CaptureError(err, map[string]string{"claim": m})
+        raven.CaptureError(err, map[string]string{"claim": fmt.Sprintf("%v", m)})
         http.Error(w, fmt.Sprintf("Failed to update kubeconfig: %v", err), http.StatusInternalServerError)
         go func() {
             a.shutdownChan <- true
@@ -456,60 +456,60 @@ func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim
     return nil
 }
 
-func updateKubeConfigPreferences(prefName string, prevValue string) error {
-    var config *k8s_api.Config
-    var outputFilename string
-    var err error
-
-    clientConfigLoadingRules := k8s_client.NewDefaultClientConfigLoadingRules()
-
-    if a.kubeconfig != "" {
-        if _, err = os.Stat(a.kubeconfig); os.IsNotExist(err) {
-            config = k8s_api.NewConfig()
-            err = nil
-        } else {
-            clientConfigLoadingRules.ExplicitPath = a.kubeconfig
-            config, err = clientConfigLoadingRules.Load()
-        }
-        outputFilename = a.kubeconfig
-    } else {
-        config, err = clientConfigLoadingRules.Load()
-        outputFilename = k8s_client.RecommendedHomeFile
-        if !k8s_api.IsConfigEmpty(config) {
-            outputFilename = clientConfigLoadingRules.GetDefaultFilename()
-        }
-    }
-    if err != nil {
-        raven.CaptureError(err, nil)
-        return err
-    }
-
-    prefInfo := k8s_api.NewPreferences()
-    if conf, ok := config.Preferences[prefName]; ok {
-        prefInfo = conf
-    }
-
-    // authInfo.AuthProvider = &k8s_api.AuthProviderConfig{
-    //     Name: "oidc",
-    //     Config: map[string]string{
-    //         "client-id":      a.clientID,
-    //         "client-secret":  a.clientSecret,
-    //         "id-token":       IDToken,
-    //         "refresh-token":  refreshToken,
-    //         "idp-issuer-url": claims.Iss,
-    //     },
-    // }
-
-    config.Preferences[prefName] = prefInfo
-
-    fmt.Printf("Writing config to %s\n", outputFilename)
-    err = k8s_client.WriteToFile(*config, outputFilename)
-    if err != nil {
-        raven.CaptureError(err, nil)
-        return err
-    }
-    return nil
-}
+// func updateKubeConfigPreferences(prefName string, prevValue string) error {
+//     var config *k8s_api.Config
+//     var outputFilename string
+//     var err error
+// 
+//     clientConfigLoadingRules := k8s_client.NewDefaultClientConfigLoadingRules()
+// 
+//     if a.kubeconfig != "" {
+//         if _, err = os.Stat(a.kubeconfig); os.IsNotExist(err) {
+//             config = k8s_api.NewConfig()
+//             err = nil
+//         } else {
+//             clientConfigLoadingRules.ExplicitPath = a.kubeconfig
+//             config, err = clientConfigLoadingRules.Load()
+//         }
+//         outputFilename = a.kubeconfig
+//     } else {
+//         config, err = clientConfigLoadingRules.Load()
+//         outputFilename = k8s_client.RecommendedHomeFile
+//         if !k8s_api.IsConfigEmpty(config) {
+//             outputFilename = clientConfigLoadingRules.GetDefaultFilename()
+//         }
+//     }
+//     if err != nil {
+//         raven.CaptureError(err, nil)
+//         return err
+//     }
+// 
+//     prefInfo := k8s_api.NewPreferences()
+//     if conf, ok := config.Preferences[prefName]; ok {
+//         prefInfo = conf
+//     }
+// 
+//     // authInfo.AuthProvider = &k8s_api.AuthProviderConfig{
+//     //     Name: "oidc",
+//     //     Config: map[string]string{
+//     //         "client-id":      a.clientID,
+//     //         "client-secret":  a.clientSecret,
+//     //         "id-token":       IDToken,
+//     //         "refresh-token":  refreshToken,
+//     //         "idp-issuer-url": claims.Iss,
+//     //     },
+//     // }
+// 
+//     config.Preferences[prefName] = prefInfo
+// 
+//     fmt.Printf("Writing config to %s\n", outputFilename)
+//     err = k8s_client.WriteToFile(*config, outputFilename)
+//     if err != nil {
+//         raven.CaptureError(err, nil)
+//         return err
+//     }
+//     return nil
+// }
 
 func open(url string) error {
 
