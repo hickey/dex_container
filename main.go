@@ -253,7 +253,7 @@ func main() {
             fmt.Fprintf(os.Stderr, "error: %v\n", err)
             os.Exit(2)
         }
-    })
+    }, nil)
 }
 
 func (a *app) oauth2Config(scopes []string) *oauth2.Config {
