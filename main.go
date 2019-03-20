@@ -69,11 +69,11 @@ func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
     tlsConfig := tls.Config{RootCAs: x509.NewCertPool()}
     rootCABytes, err := ioutil.ReadFile(rootCAs)
     if err != nil {
-        raven.CaptureError(errors.Errorf("failed to read root-ca: %v", err), nil)
+        raven.CaptureError(fmt.Errorf("failed to read root-ca: %v", err), nil)
         return nil, fmt.Errorf("failed to read root-ca: %v", err)
     }
     if !tlsConfig.RootCAs.AppendCertsFromPEM(rootCABytes) {
-        raven.CaptureError(errors.Errorf("no certs found in root CA file %q", rootCAs), nil)
+        raven.CaptureError(fmt.Errorf("no certs found in root CA file %q", rootCAs), nil)
         return nil, fmt.Errorf("no certs found in root CA file %q", rootCAs)
     }
     return &http.Client{
@@ -134,12 +134,12 @@ func cmd() *cobra.Command {
         RunE: func(cmd *cobra.Command, args []string) error {
             u, err := url.Parse(a.redirectURI)
             if err != nil {
-                raven.CaptureError(errors.Errorf("parse redirect-uri: %v", err), nil)
+                raven.CaptureError(fmt.Errorf("parse redirect-uri: %v", err), nil)
                 return fmt.Errorf("parse redirect-uri: %v", err)
             }
             listenURL, err := url.Parse(listen)
             if err != nil {
-                raven.CaptureError(errors.Errorf("parse listen address: %v", err), nil)
+                raven.CaptureError(fmt.Errorf("parse listen address: %v", err), nil)
                 return fmt.Errorf("parse listen address: %v", err)
             }
 
@@ -168,7 +168,7 @@ func cmd() *cobra.Command {
             ctx := oidc.ClientContext(context.Background(), a.client)
             provider, err := oidc.NewProvider(ctx, issuerURL)
             if err != nil {
-                raven.CaptureErrorAndWait(errors.Errorf("Failed to query provider %q: %v", issuerURL, err), nil)
+                raven.CaptureErrorAndWait(fmt.Errorf("Failed to query provider %q: %v", issuerURL, err), nil)
                 return fmt.Errorf("Failed to query provider %q: %v", issuerURL, err)
             }
 
@@ -179,7 +179,7 @@ func cmd() *cobra.Command {
                 ScopesSupported []string `json:"scopes_supported"`
             }
             if err := provider.Claims(&s); err != nil {
-                raven.CaptureError(errors.Errorf("Failed to parse provider scopes_supported: %v", err), nil)
+                raven.CaptureError(fmt.Errorf("Failed to parse provider scopes_supported: %v", err), nil)
                 return fmt.Errorf("Failed to parse provider scopes_supported: %v", err)
             }
 
@@ -219,7 +219,7 @@ func cmd() *cobra.Command {
                 go a.waitShutdown()
                 return http.ListenAndServeTLS(listenURL.Host, tlsCert, tlsKey, nil)
             default:
-                raven.CaptureError(error.Errorf("listen address %q is not using http or https", listen), nil)
+                raven.CaptureError(fmt.Errorf("listen address %q is not using http or https", listen), nil)
                 return fmt.Errorf("listen address %q is not using http or https", listen)
             }
         },
@@ -299,12 +299,12 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         }
         code := r.FormValue("code")
         if code == "" {
-            raven.CaptureError(errors.Errorf("no code in request: %q", r.Form), nil)
+            raven.CaptureError(fmt.Errorf("no code in request: %q", r.Form), nil)
             http.Error(w, fmt.Sprintf("no code in request: %q", r.Form), http.StatusBadRequest)
             return
         }
         if state := r.FormValue("state"); state != exampleAppState {
-            raven.CaptureError(errors.Errorf("expected state %q got %q", exampleAppState, state), nil)
+            raven.CaptureError(fmt.Errorf("expected state %q got %q", exampleAppState, state), nil)
             http.Error(w, fmt.Sprintf("expected state %q got %q", exampleAppState, state), http.StatusBadRequest)
             return
         }
