@@ -167,7 +167,7 @@ func cmd() *cobra.Command {
             ctx := oidc.ClientContext(context.Background(), a.client)
             provider, err := oidc.NewProvider(ctx, issuerURL)
             if err != nil {
-                raven.CaptureError(error(fmt.Sprintf("Failed to query provider %q: %v", issuerURL, err)), nil)
+                raven.CaptureErrorAndWait(error(fmt.Sprintf("Failed to query provider %q: %v", issuerURL, err)), nil)
                 return fmt.Errorf("Failed to query provider %q: %v", issuerURL, err)
             }
 
