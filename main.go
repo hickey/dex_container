@@ -26,6 +26,7 @@ import (
     "github.com/coreos/go-oidc"
     "github.com/spf13/cobra"
     "golang.org/x/oauth2"
+    "github.com/getsentry/raven-go"
 )
 
 const (
@@ -67,9 +68,11 @@ func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
     tlsConfig := tls.Config{RootCAs: x509.NewCertPool()}
     rootCABytes, err := ioutil.ReadFile(rootCAs)
     if err != nil {
+        raven.CaptureError(error(fmt.Sprintf("failed to read root-ca: %v", err)), nil)
         return nil, fmt.Errorf("failed to read root-ca: %v", err)
     }
     if !tlsConfig.RootCAs.AppendCertsFromPEM(rootCABytes) {
+        raven.CaptureError(error(fmt.Sprintf("no certs found in root CA file %q", rootCAs)), nil)
         return nil, fmt.Errorf("no certs found in root CA file %q", rootCAs)
     }
     return &http.Client{
@@ -93,18 +96,21 @@ type debugTransport struct {
 func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
     reqDump, err := httputil.DumpRequest(req, true)
     if err != nil {
+        raven.CaptureError(err, nil)
         return nil, err
     }
     log.Printf("%s", reqDump)
 
     resp, err := d.t.RoundTrip(req)
     if err != nil {
+        raven.CaptureError(err, nil)
         return nil, err
     }
 
     respDump, err := httputil.DumpResponse(resp, true)
     if err != nil {
         resp.Body.Close()
+        raven.CaptureError(err, nil)
         return nil, err
     }
     log.Printf("%s", respDump)
@@ -127,10 +133,12 @@ func cmd() *cobra.Command {
         RunE: func(cmd *cobra.Command, args []string) error {
             u, err := url.Parse(a.redirectURI)
             if err != nil {
+                raven.CaptureError(error(fmt.Sprintf("parse redirect-uri: %v", err)), nil)
                 return fmt.Errorf("parse redirect-uri: %v", err)
             }
             listenURL, err := url.Parse(listen)
             if err != nil {
+                raven.CaptureError(error(fmt.Sprintf("parse listen address: %v", err)), nil)
                 return fmt.Errorf("parse listen address: %v", err)
             }
 
@@ -159,6 +167,7 @@ func cmd() *cobra.Command {
             ctx := oidc.ClientContext(context.Background(), a.client)
             provider, err := oidc.NewProvider(ctx, issuerURL)
             if err != nil {
+                raven.CaptureError(error(fmt.Sprintf("Failed to query provider %q: %v", issuerURL, err)), nil)
                 return fmt.Errorf("Failed to query provider %q: %v", issuerURL, err)
             }
 
@@ -169,6 +178,7 @@ func cmd() *cobra.Command {
                 ScopesSupported []string `json:"scopes_supported"`
             }
             if err := provider.Claims(&s); err != nil {
+                raven.CaptureError(error(fmt.Sprintf("Failed to parse provider scopes_supported: %v", err), nil))
                 return fmt.Errorf("Failed to parse provider scopes_supported: %v", err)
             }
 
@@ -208,6 +218,7 @@ func cmd() *cobra.Command {
                 go a.waitShutdown()
                 return http.ListenAndServeTLS(listenURL.Host, tlsCert, tlsKey, nil)
             default:
+                raven.CaptureError(error(fmt.Sprintf("listen address %q is not using http or https", listen)), nil)
                 return fmt.Errorf("listen address %q is not using http or https", listen)
             }
         },
@@ -227,11 +238,21 @@ func cmd() *cobra.Command {
     return &c
 }
 
+func init() {
+    raven.SetDSN("https://dada174b5abe4b2fa787820b4286e178:53e54b07706245d3a5a8e61b14674fe9@sentry.io/1418609")
+    raven.SetRelease("0.5.0")
+    raven.SetEnvironment("production")
+
+}
+
+
 func main() {
-    if err := cmd().Execute(); err != nil {
-        fmt.Fprintf(os.Stderr, "error: %v\n", err)
-        os.Exit(2)
-    }
+    raven.CapturePanic(func(){
+        if err := cmd().Execute(); err != nil {
+            fmt.Fprintf(os.Stderr, "error: %v\n", err)
+            os.Exit(2)
+        }
+    })
 }
 
 func (a *app) oauth2Config(scopes []string) *oauth2.Config {
@@ -271,15 +292,18 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
     case "GET":
         // Authorization redirect callback from OAuth2 auth flow.
         if errMsg := r.FormValue("error"); errMsg != "" {
+            raven.CaptureError(error(errMsg), nil)
             http.Error(w, errMsg+": "+r.FormValue("error_description"), http.StatusBadRequest)
             return
         }
         code := r.FormValue("code")
         if code == "" {
+            raven.CaptureError(error{fmt.Sprintf("no code in request: %q", r.Form), nil)
             http.Error(w, fmt.Sprintf("no code in request: %q", r.Form), http.StatusBadRequest)
             return
         }
         if state := r.FormValue("state"); state != exampleAppState {
+            raven.CaptureError(error{fmt.Sprintf("expected state %q got %q", exampleAppState, state)}, nil)
             http.Error(w, fmt.Sprintf("expected state %q got %q", exampleAppState, state), http.StatusBadRequest)
             return
         }
@@ -288,6 +312,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         // Form request from frontend to refresh a token.
         refresh := r.FormValue("refresh_token")
         if refresh == "" {
+            raven.CaptureError(error{"no refresh_token in response"}, nil)
             http.Error(w, fmt.Sprintf("no refresh_token in request: %q", r.Form), http.StatusBadRequest)
             return
         }
@@ -297,23 +322,27 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         }
         token, err = oauth2Config.TokenSource(ctx, t).Token()
     default:
+        raven.CaptureError(error{"method not implemented"}, map[string]string{"method": r.Method})
         http.Error(w, fmt.Sprintf("method not implemented: %s", r.Method), http.StatusBadRequest)
         return
     }
 
     if err != nil {
+        raven.CaptureError(error{"failed to get token"}, nil)
         http.Error(w, fmt.Sprintf("failed to get token: %v", err), http.StatusInternalServerError)
         return
     }
 
     rawIDToken, ok := token.Extra("id_token").(string)
     if !ok {
+        raven.CaptureError(error{"no id_token in response"}, nil)
         http.Error(w, "no id_token in token response", http.StatusInternalServerError)
         return
     }
 
     idToken, err := a.verifier.Verify(r.Context(), rawIDToken)
     if err != nil {
+        raven.CaptureError(err, nil)
         http.Error(w, fmt.Sprintf("Failed to verify ID token: %v", err), http.StatusInternalServerError)
         return
     }
@@ -325,6 +354,7 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
     var m claim
     err = json.Unmarshal(claims, &m)
     if err != nil {
+        raven.CaptureError(err, map[string]string{"claims": claims})
         http.Error(w, fmt.Sprintf("Failed to read claims: %v", err), http.StatusInternalServerError)
         go func() {
             a.shutdownChan <- true
@@ -332,8 +362,9 @@ func (a *app) handleCallback(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    err = updateKubeConfig(rawIDToken, token.RefreshToken, m, a)
+    err = updateKubeConfigUserToken(rawIDToken, token.RefreshToken, m, a)
     if err != nil {
+        raven.CaptureError(err, map[string]string{"claim": m})
         http.Error(w, fmt.Sprintf("Failed to update kubeconfig: %v", err), http.StatusInternalServerError)
         go func() {
             a.shutdownChan <- true
@@ -368,7 +399,7 @@ func (a *app) waitShutdown() {
     }
 }
 
-func updateKubeConfig(IDToken string, refreshToken string, claims claim, a *app) error {
+func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim, a *app) error {
     var config *k8s_api.Config
     var outputFilename string
     var err error
@@ -392,11 +423,13 @@ func updateKubeConfig(IDToken string, refreshToken string, claims claim, a *app)
         }
     }
     if err != nil {
+        raven.CaptureError(err, nil)
         return err
     }
 
     authInfo := k8s_api.NewAuthInfo()
-    if conf, ok := config.AuthInfos[claims.Email]; ok {
+    userEntry := fmt.Sprintf("%s@%s", claims.Name, a.clientID)
+    if conf, ok := config.AuthInfos[userEntry]; ok {
         authInfo = conf
     }
 
@@ -411,12 +444,67 @@ func updateKubeConfig(IDToken string, refreshToken string, claims claim, a *app)
         },
     }
 
-    user_entry := fmt.Sprintf("%s@%s", claims.Name, a.clientID)
-    config.AuthInfos[user_entry] = authInfo
+    config.AuthInfos[userEntry] = authInfo
 
     fmt.Printf("Writing config to %s\n", outputFilename)
     err = k8s_client.WriteToFile(*config, outputFilename)
     if err != nil {
+        raven.CaptureError(err, nil)
+        return err
+    }
+    return nil
+}
+
+func updateKubeConfigPreferences(prefName string, prevValue string) error {
+    var config *k8s_api.Config
+    var outputFilename string
+    var err error
+
+    clientConfigLoadingRules := k8s_client.NewDefaultClientConfigLoadingRules()
+
+    if a.kubeconfig != "" {
+        if _, err = os.Stat(a.kubeconfig); os.IsNotExist(err) {
+            config = k8s_api.NewConfig()
+            err = nil
+        } else {
+            clientConfigLoadingRules.ExplicitPath = a.kubeconfig
+            config, err = clientConfigLoadingRules.Load()
+        }
+        outputFilename = a.kubeconfig
+    } else {
+        config, err = clientConfigLoadingRules.Load()
+        outputFilename = k8s_client.RecommendedHomeFile
+        if !k8s_api.IsConfigEmpty(config) {
+            outputFilename = clientConfigLoadingRules.GetDefaultFilename()
+        }
+    }
+    if err != nil {
+        raven.CaptureError(err, nil)
+        return err
+    }
+
+    prefInfo := k8s_api.NewPreferences()
+    if conf, ok := config.Preferences[prefName]; ok {
+        prefInfo = conf
+    }
+
+    // authInfo.AuthProvider = &k8s_api.AuthProviderConfig{
+    //     Name: "oidc",
+    //     Config: map[string]string{
+    //         "client-id":      a.clientID,
+    //         "client-secret":  a.clientSecret,
+    //         "id-token":       IDToken,
+    //         "refresh-token":  refreshToken,
+    //         "idp-issuer-url": claims.Iss,
+    //     },
+    // }
+
+    config.Preferences[prefName] = prefInfo
+
+    fmt.Printf("Writing config to %s\n", outputFilename)
+    err = k8s_client.WriteToFile(*config, outputFilename)
+    if err != nil {
+        raven.CaptureError(err, nil)
         return err
     }
     return nil
