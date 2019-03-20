@@ -7,6 +7,6 @@ RUN apk add git && \
     go get -u github.com/mitchellh/gox && echo "Downloaded gox" && \
     go get github.com/hickey/kubeauth && echo "Downloaded kubeauth" && \
     cd /go/src/github.com/hickey/kubeauth && \
-    git co develop && \
+    git checkout develop && \
     dep init && \
     gox -ldflags="-X main.VERSION=1" -osarch="darwin/386 darwin/amd64 linux/386 linux/amd64 windows/386 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
