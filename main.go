@@ -32,6 +32,7 @@ import (
 
 const (
     exampleAppState = "login"
+    releaseVersion  = "0.5.0"
 )
 
 type app struct {
@@ -241,7 +242,7 @@ func cmd() *cobra.Command {
 
 func init() {
     raven.SetDSN("https://dada174b5abe4b2fa787820b4286e178:53e54b07706245d3a5a8e61b14674fe9@sentry.io/1418609")
-    raven.SetRelease("0.5.0")
+    raven.SetRelease(fmt.Sprintf("kubeauth@%s", releaseVersion))
     raven.SetEnvironment("production")
 
 }
