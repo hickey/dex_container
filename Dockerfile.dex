@@ -1,0 +1,25 @@
+FROM golang:1.11-alpine
+
+ENV DEX_VERSION=2.13.0
+
+ENV CGO_ENABLED=1
+
+RUN apk add git gcc libc-dev
+RUN mkdir -p /go/src/github.com/dexidp && cd /go/src/github.com/dexidp && \
+    git clone https://github.com/hickey/dex.git  # git clone https://github.com/dexidp/dex.git
+RUN cd /go/src/github.com/dexidp/dex && \
+    git checkout -b working origin/refresh-tokens-rebased  # git checkout -b working v${DEX_VERSION}
+# RUN go get -u github.com/golang/dep/cmd/dep && \
+#     cd /go/src/github.com/dexidp/dex && dep init && dep ensure
+RUN cd /go/src/github.com/dexidp/dex/cmd/dex && go build
+
+
+FROM golang:1.11-alpine
+
+RUN apk add ca-certificates
+WORKDIR /dex
+ADD ./web web
+COPY --from=0 /go/src/github.com/dexidp/dex/cmd/dex/dex /usr/local/bin
+RUN chmod 755 /usr/local/bin/dex
+
+CMD ["/usr/local/bin/dex", "serve", "dex.yaml"]
