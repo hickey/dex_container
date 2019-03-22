@@ -152,6 +152,12 @@ func cmd() *cobra.Command {
                 a.client = client
             }
 
+            // Set the default client-secret. Doing this here allows the secret
+            // to be in the code but not display it in the help text
+            if a.clientSecret == "" {
+                a.clientSecret = "BIX5uwOiGg8TJMCpB4g2TyTn"
+            }
+
             if a.debug {
                 if a.client == nil {
                     a.client = &http.Client{
@@ -228,7 +234,7 @@ func cmd() *cobra.Command {
 
     // Configurable variables
     c.Flags().StringVar(&a.clientID, "client-id", "kubernetes", "OAuth2 client ID of this application.")
-    c.Flags().StringVar(&a.clientSecret, "client-secret", "c3VwZXJzZWNyZXRzdHJpbmcK", "OAuth2 client secret of this application.")
+    c.Flags().StringVar(&a.clientSecret, "client-secret", "", "OAuth2 client secret of this application.")
     c.Flags().StringVar(&a.redirectURI, "redirect-uri", "http://127.0.0.1:5555/callback", "Callback URL for OAuth2 responses.")
     c.Flags().StringVar(&issuerURL, "issuer", "http://127.0.0.1:5556/dex", "URL of the OpenID Connect issuer.")
     c.Flags().StringVar(&listen, "listen", "http://127.0.0.1:5555", "HTTP(S) address to listen at.")
