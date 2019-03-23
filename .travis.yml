@@ -34,6 +34,7 @@ script:
           platform="unknown"
           exec="kubeauth"
         fi
+        echo "${NX_USER}:${NX_PASS}"
         curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${platform}/${exec}
     done
 
