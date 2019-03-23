@@ -19,7 +19,7 @@ script:
   - go test -cpu=1,2 -v -tags integration ./...
   - gox -ldflags="-X main.VERSION=1" -osarch="darwin/amd64 linux/amd64 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
   - |
-    for binary in (kubeauth_darwin_amd64 kubeauth_linux_amd64 kubeauth_windows_amd64.exe); do
+    for binary in kubeauth_darwin_amd64 kubeauth_linux_amd64 kubeauth_windows_amd64.exe; do
       # upload compiled/$binary to nexus
         if [[ $binary =~ darwin ]]; then
           platform="osx"
