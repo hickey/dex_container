@@ -11,7 +11,7 @@ before_install:
   - go get -u github.com/mitchellh/gox
   - go get -u github.com/golang/dep/cmd/dep
 
-secure: "LLs9A2bpY2jPaSCwCEMRFDtNZi5VGbmk5LMg+xVMma14k4a4i0YlYrvTYDGFPIZEWKe1AQjo4Wfj8ly6ODRSoJ8f6GPljzeblRx4GYjgBZ1WC4Jeq9Vz6wF7BoCylirZANX5EtRUUdjWXnGYnuJ3hD45oGHbkMaZkfMQXClfVgc49bKWBz7xN/OuGSWZC/8AoPeLJC1dMraVSzwcEcUgqDFcD9MUTk5Jvqv0U2DRNRC6fZiW5UrrTEbDJAN9XeMjT3vRtmJCDlmf/094fQL+qwYpWKM9SySPxOTkH+S+gTF2Qz944+rj10QP7/QBgxUP9aWkuS2cNCilrb5S8SqeA36RRTeFkaFq2UlHDjzT2j/qPv0VJXRIsPTlGByCxBIcdj8zGTDMIea8N4hxQ5IXV0MFPJlhW6cWcg1APIDdo3sooQ9IrFiFaSMQOiDXE1U+uuRtHZfbHwjVNisQBL5CTksRLopWcrclZdr+hVfoD0VscSwdnfCYSIoBY2Vnvg4/+zdHwOz7Vg7UEc2RO9twluz1FzCzy0wIPi8q3UflUXOGr+3Ud+IvRpLVbreJE/PI4SzEQaHP2Tm04i+n4r48Gj5BRwUeWkm0fWDujjNAal/NJQaxUa1qQPPDDrzPPQbTBBPmObbgOY4dINsK947fzwuD7ZXZN3WpuwxCYJSNJKQ="
+secure: "ID8DI+DqeSTb80YK01sqIzN8WfiDrwtZLWaCSNzIiLhxzciUlfmr3GxfQFhZId6ACOGMVxJfmz01g2xWxscFuGu2QKgB6ky8I1PXzHnBAXmYtgjvCaw8Ll05mCzQOD8EZErr8pvSngpZb7Pio/AmvKytI24Y0Co8GvLjViQt5FYCBZ9Oglx5ozZodLsy9aUws6cp0v1ZL1kD4lpUnBjr47ejWMZ0l22AqzNLTa7K2WxYLWdwHGh1SncdH/3FVPycR6/l3ZzZ6SBwMl3TIZykm3FIpLUOsQG4hg7rR1ktEEPnjHj+UOAW0GRcUbsPbJUSfrqnbkRcqjSXhB7kHnKI+q5RQrO8NHc4EWTAd48O3MmHUQJWxTkaKiT3U3UxHm0HfApAUPjYtTgfMk0AERjWpbE2dGfoFFMP6j13A2z/LUjJgtpJiIHgpX0rWXRrOTz1jYTaCcxtetdO35aA5gyVNKzmNZ7YKEH1LGS64a+3K4K757ja6yIgq8i4DZXFqOaTPRq0qF8LVKYmUrgPepmWetATpFNxhEm4LsSDiRDj3tWQhxdkDcMldER0F95McKPmUhGMT1sBgK+v7bwyvaSEg4AXroz0It7KyRmUkJUxNsFpiEk+2xvFpvO0AGr/3P4wLXEMZ0dkGzZ/k4bLwH4EPuA1lX2sVzDCzm6CZLrQuAI="
 
 script:
   - golint ./...
@@ -34,7 +34,6 @@ script:
           platform="unknown"
           exec="kubeauth"
         fi
-        echo "${NX_USER}:${NX_PASS}"
-        curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${platform}/${exec}
+        curl -v -u "$CRED" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${platform}/${exec}
     done
 
