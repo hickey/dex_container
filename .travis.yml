@@ -5,13 +5,13 @@ go:
 
 env:
   - CGO_ENABLED=1
+  - secure: "Jw1EaF4yBYVztsgEuRUd+oMMv3/0ldSzRTCLi2ScVDjAQdh8OLVO5PxyNF/3q3u+TrbJ2TaSSTaH2ngMhDhQmsgAtQ3hisf93p+BDaL6LVgVPTK2op5HzAjXjLVdQu9Bfezu2LzF0ott5OP0hP68k5SlTYRgG5VhWKqjakRoIyh6Kv3Apun6z6RsF0SYkgxQkTd/5xhD1yeZtAeSzvZGRRW4kmve0Gg8xw0Y405cup9p39yAmtchzgdnND7exeJ8qo/RSp2wSkALuYj9vNwzEhou4q0wUOiPh61GRm1womA0O991Y319Gat8TxSJL5ule0uXVBqdgzuoq1R4zrDK5JxoYmsiJntsBi4TDgtf+Bzbe88knAqviAvTjC9hFhedRe5ptpl3GXAxeRcMWS2yyb3SFIKtnLPcbxkXLwF/a2PF7JedS25wY3H9PiweFQEHCCagtBc11yoNKxFQdnGF+uEuODgJ8afEHzIQu8Ivrcr3A39wDDLEG13UACYzcszLberK8aitQ0JNOWH0mi8AheBPQp12WSlAohLX20Nu9hTeGH6b5UcrZbs0g6S6M2Asj4eGIa6Jv3/NIT2h1wEmGt4gEzx+kf2gGpeOILuBFtvOWKKGCB/ZxVAHvj6RRJ22Se0scd5ac6iy7qeDPPoU6LJ/PTtombuPX3FfUHV/kFQ="
+  - secure: "T9SD/jg91nvvFDlZkI13b9CLVO3Bm/XQb/aw4r+fQC55IAnnjGCcu9kC6NZRxBa0LFsQf9g+xN9u4XMtd5KuWZMMU6xvTBIQ/58OVKc+Ndg5jfOKzH92GcOBwlG58qN1CybtOXeEs6IM8nmQ2GzjLeo+a1n55dERp7Zvhv5zaGt8DdK1Rf5YRgGwdvsn3N6iIEHT8Bql15446S9R4IJ8HsCTkBghaNiEbMElSgoCOy3omNYu4zDbNotuayHKwikXsd0dtMH8Q0OxEx/rWiAwqu5A5c9OvUiMIBKHAmaNSOnmuehMIBmnyLtXZj76IoJhS9AVSF0DuZ9ggAZBEZ8MvWcWUUVb6GSyMljHXIiKfYF/0C3C5XG1z3pHoJSvsR/XnjT/QS0y3SwMyGP6h9fVXfbk93hZQBtZ1Jtsc7KgdxU0siyuEhjdxJbRphgYCojEiFHzMyqQV4G8jQEqvWsgWukaznu62bxnV3gVZWRbfCbYlbsDXeXNMMUcUer2CTP3kc4H3ELhvnPdYdHsr/8JdEwPtSW1sUHBhNiDMPWHfhtcqu1r51RPVhScfIOPoxl5Iv78mOjHJKBRB0nUvI68iJjtt2NqhR1gLwj219P4mJ+N6Xa8TvlruEuqLdq1Ckvq7XYjdO6xufGrx22ZQ7D+OD4RGYRODCTDXCLBSHJuyBE="
 
 before_install:
   - go get -u golang.org/x/lint/golint
   - go get -u github.com/mitchellh/gox
   - go get -u github.com/golang/dep/cmd/dep
-
-secure: "ID8DI+DqeSTb80YK01sqIzN8WfiDrwtZLWaCSNzIiLhxzciUlfmr3GxfQFhZId6ACOGMVxJfmz01g2xWxscFuGu2QKgB6ky8I1PXzHnBAXmYtgjvCaw8Ll05mCzQOD8EZErr8pvSngpZb7Pio/AmvKytI24Y0Co8GvLjViQt5FYCBZ9Oglx5ozZodLsy9aUws6cp0v1ZL1kD4lpUnBjr47ejWMZ0l22AqzNLTa7K2WxYLWdwHGh1SncdH/3FVPycR6/l3ZzZ6SBwMl3TIZykm3FIpLUOsQG4hg7rR1ktEEPnjHj+UOAW0GRcUbsPbJUSfrqnbkRcqjSXhB7kHnKI+q5RQrO8NHc4EWTAd48O3MmHUQJWxTkaKiT3U3UxHm0HfApAUPjYtTgfMk0AERjWpbE2dGfoFFMP6j13A2z/LUjJgtpJiIHgpX0rWXRrOTz1jYTaCcxtetdO35aA5gyVNKzmNZ7YKEH1LGS64a+3K4K757ja6yIgq8i4DZXFqOaTPRq0qF8LVKYmUrgPepmWetATpFNxhEm4LsSDiRDj3tWQhxdkDcMldER0F95McKPmUhGMT1sBgK+v7bwyvaSEg4AXroz0It7KyRmUkJUxNsFpiEk+2xvFpvO0AGr/3P4wLXEMZ0dkGzZ/k4bLwH4EPuA1lX2sVzDCzm6CZLrQuAI="
 
 script:
   - golint ./...
@@ -34,6 +34,6 @@ script:
           platform="unknown"
           exec="kubeauth"
         fi
-        curl -v -u "$CRED" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${platform}/${exec}
+        curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${platform}/${exec}
     done
 
