@@ -9,11 +9,13 @@ env:
 before_install:
   - go get -u golang.org/x/lint/golint
   - go get -u github.com/mitchellh/gox
+  - go get -u github.com/golang/dep/cmd/dep
 
 secure: "LLs9A2bpY2jPaSCwCEMRFDtNZi5VGbmk5LMg+xVMma14k4a4i0YlYrvTYDGFPIZEWKe1AQjo4Wfj8ly6ODRSoJ8f6GPljzeblRx4GYjgBZ1WC4Jeq9Vz6wF7BoCylirZANX5EtRUUdjWXnGYnuJ3hD45oGHbkMaZkfMQXClfVgc49bKWBz7xN/OuGSWZC/8AoPeLJC1dMraVSzwcEcUgqDFcD9MUTk5Jvqv0U2DRNRC6fZiW5UrrTEbDJAN9XeMjT3vRtmJCDlmf/094fQL+qwYpWKM9SySPxOTkH+S+gTF2Qz944+rj10QP7/QBgxUP9aWkuS2cNCilrb5S8SqeA36RRTeFkaFq2UlHDjzT2j/qPv0VJXRIsPTlGByCxBIcdj8zGTDMIea8N4hxQ5IXV0MFPJlhW6cWcg1APIDdo3sooQ9IrFiFaSMQOiDXE1U+uuRtHZfbHwjVNisQBL5CTksRLopWcrclZdr+hVfoD0VscSwdnfCYSIoBY2Vnvg4/+zdHwOz7Vg7UEc2RO9twluz1FzCzy0wIPi8q3UflUXOGr+3Ud+IvRpLVbreJE/PI4SzEQaHP2Tm04i+n4r48Gj5BRwUeWkm0fWDujjNAal/NJQaxUa1qQPPDDrzPPQbTBBPmObbgOY4dINsK947fzwuD7ZXZN3WpuwxCYJSNJKQ="
 
 script:
   - golint ./...
+  - dep init
   - go test -cpu=1,2 -v -tags integration ./...
   - gox -ldflags="-X main.VERSION=1" -osarch="darwin/amd64 linux/amd64 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
   - |
