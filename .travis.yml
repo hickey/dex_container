@@ -19,6 +19,15 @@ script:
   - dep init
   - go test -cpu=1,2 -v -tags integration ./...
   - gox -ldflags="-X main.VERSION=1" -osarch="darwin/amd64 linux/amd64 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
+  # Gather info about this build
+  - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
+  - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
+  - branch=$(echo -n ${CI_COMMIT_REF_NAME} | tr -cs '[0-9A-Za-z-]' '-')
+  # Setup for versions to build
+  - publish_versions=(${version}-${branch}.${gitref}  ${version}-${branch})
+  # Check to see if this is a full release or just a development release
+  - if [ "$branch" = 'master' ]; then publish_versions=($version); fi
+  # Publish the artifacts
   - |
     for binary in kubeauth_darwin_amd64 kubeauth_linux_amd64 kubeauth_windows_amd64.exe; do
       # upload compiled/$binary to nexus
@@ -35,6 +44,6 @@ script:
           platform="unknown"
           exec="kubeauth"
         fi
-        curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${platform}/${exec}
+        curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${publish_versions}${platform}/${exec}
     done
 
