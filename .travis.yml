@@ -15,6 +15,7 @@ before_install:
   - go get -u github.com/golang/dep/cmd/dep
 
 script:
+  - set -x
   - golint ./...
   - dep init
   - go test -cpu=1,2 -v -tags integration ./...
