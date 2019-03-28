@@ -20,6 +20,7 @@ script:
   - go test -cpu=1,2 -v -tags integration ./...
   - gox -ldflags="-X main.VERSION=1" -osarch="darwin/amd64 linux/amd64 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
   # Gather info about this build
+  - git describe --always --tags
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
   - echo "version=$version"
   - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
