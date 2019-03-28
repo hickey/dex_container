@@ -23,8 +23,10 @@ script:
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
   - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
   - branch=$(git branch | grep \* | cut -d ' ' -f2 | tr -cs '[0-9A-Za-z-]' '-')
+  - echo " $version / $gitref / $branch "
   # Setup for versions to build
   - publish_versions=(${version}-${branch}.${gitref}  ${version}-${branch})
+  - echo "$publish_versions"
   # Check to see if this is a full release or just a development release
   - if [ "$branch" = 'master' ]; then publish_versions=($version); fi
   # Publish the artifacts
