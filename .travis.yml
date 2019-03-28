@@ -15,17 +15,20 @@ before_install:
   - go get -u github.com/golang/dep/cmd/dep
 
 script:
-  - set -x
   - golint ./...
   - dep init
   - go test -cpu=1,2 -v -tags integration ./...
   - gox -ldflags="-X main.VERSION=1" -osarch="darwin/amd64 linux/amd64 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
   # Gather info about this build
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
+  - echo "version=$version"
   - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
+  - echo "gitref=$gitref"
   - gitid=${gitref#g}
+  - echo "gitid=$gitid"
   - branch=$(git show-ref | grep $gitid | head -1 | cut -d '/' -f3- | tr -cs '[0-9A-Za-z-]' '-')
   - branch=${branch%-}
+  - echo "branch=$branch"
   # Setup for versions to build
   - publish_versions=(${branch}/${gitref}  ${branch})
   # Check to see if this is a full release or just a development release
