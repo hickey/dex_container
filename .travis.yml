@@ -25,7 +25,7 @@ script:
   - gitid=${gitref#g}
   - branch=$(git show-ref | grep $gitid | head -1 | cut -d '/' -f3- | tr -cs '[0-9A-Za-z-]' '-')
   # Setup for versions to build
-  - publish_versions=(${version}-${branch}.${gitref}  ${version}-${branch})
+  - publish_versions=(${branch}/${gitref}  ${branch})
   # Check to see if this is a full release or just a development release
   - if [ "$branch" = 'master' ]; then publish_versions=($version); fi
   # Publish the artifacts
