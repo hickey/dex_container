@@ -22,9 +22,8 @@ script:
   # Gather info about this build
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
   - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
-  - branch=$(git branch | grep \* | cut -d ' ' -f2 | tr -cs '[0-9A-Za-z-]' '-')
-  - echo " $version / $gitref / $branch "
-  - git show-ref
+  - gitid=${gitref#g}
+  - branch=$(git show-ref | grep $gitid | head -1 | cut -d '/' -f3- | tr -cs '[0-9A-Za-z-]' '-')
   # Setup for versions to build
   - publish_versions=(${version}-${branch}.${gitref}  ${version}-${branch})
   - echo "$publish_versions"
