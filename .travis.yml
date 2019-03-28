@@ -47,7 +47,8 @@ script:
           exec="kubeauth"
         fi
         for dir in "${publish_versions[@]}"; do
-          curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${dir}/${platform}/${exec}
+          echo "pushing ${dir}/${platform}/${exec}"
+          curl -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${dir}/${platform}/${exec}
         done
     done
 
