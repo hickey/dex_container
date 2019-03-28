@@ -27,6 +27,7 @@ script:
   # Setup for versions to build
   - publish_versions=(${version}-${branch}.${gitref}  ${version}-${branch})
   - echo "$publish_versions"
+  - git version
   # Check to see if this is a full release or just a development release
   - if [ "$branch" = 'master' ]; then publish_versions=($version); fi
   # Publish the artifacts
