@@ -23,7 +23,7 @@ script:
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
   - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
   - gitid=${gitref#g}
-  - branch=$(git show-ref | grep $gitid | head -1 | cut -d '/' -f3- | tr -cs '[0-9A-Za-z-]' '-')
+  - branch=${$(git show-ref | grep $gitid | head -1 | cut -d '/' -f3- | tr -cs '[0-9A-Za-z-]' '-')%-}
   # Setup for versions to build
   - publish_versions=(${branch}/${gitref}  ${branch})
   # Check to see if this is a full release or just a development release
@@ -45,7 +45,7 @@ script:
           platform="unknown"
           exec="kubeauth"
         fi
-        for dir in $publish_versions; do
+        for dir in "${publish_versions[@]}"; do
           curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${dir}/${platform}/${exec}
         done
     done
