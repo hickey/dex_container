@@ -23,6 +23,8 @@ script:
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
   - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
   - branch=$(echo -n ${CI_COMMIT_REF_NAME} | tr -cs '[0-9A-Za-z-]' '-')
+  - echo "$version / $gitref / $branch"
+  - env | sort 
   # Setup for versions to build
   - publish_versions=(${version}-${branch}.${gitref}  ${version}-${branch})
   # Check to see if this is a full release or just a development release
@@ -44,6 +46,6 @@ script:
           platform="unknown"
           exec="kubeauth"
         fi
-        curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${publish_versions}${platform}/${exec}
+        curl -v -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${publish_versions}/${platform}/${exec}
     done
 
