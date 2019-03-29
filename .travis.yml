@@ -3,6 +3,9 @@ language: go
 go:
   - 1.11.x
 
+git:
+  depth: false
+
 env:
   global:
     - CGO_ENABLED=1
@@ -20,10 +23,9 @@ script:
   - go test -cpu=1,2 -v -tags integration ./...
   - gox -ldflags="-X main.VERSION=1" -osarch="darwin/amd64 linux/amd64 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
   # Gather info about this build
-  - git describe --always --tags
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
   - echo "version=$version"
-  - gitref=$(git describe --always --tags | gawk 'gsub(/^.*-/, "")')
+  - gitref=$(git describe --always)
   - echo "gitref=$gitref"
   - gitid=${gitref#g}
   - echo "gitid=$gitid"
@@ -34,6 +36,7 @@ script:
   - publish_versions=(${branch}/${gitref}  ${branch})
   # Check to see if this is a full release or just a development release
   - if [ "$branch" = 'master' ]; then publish_versions=($version); fi
+  - echo "publish_versions=$publish_versions"
   # Publish the artifacts
   - |
     for binary in kubeauth_darwin_amd64 kubeauth_linux_amd64 kubeauth_windows_amd64.exe; do
