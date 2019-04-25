@@ -32,7 +32,6 @@ import (
 
 const (
     exampleAppState = "login"
-    VERSION         = "undefined"
 )
 
 type app struct {
@@ -103,6 +102,7 @@ type debugTransport struct {
 
 // Create a top level opbject to poss between fucntions
 var kubeauth app
+var VERSION string = "undefined"
 
 
 func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
