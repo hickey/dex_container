@@ -1,4 +1,62 @@
 language: go
 
 go:
-  - "1.11.x"
+  - 1.11.x
+
+git:
+  depth: false
+
+env:
+  global:
+    - CGO_ENABLED=1
+    - secure: "Jw1EaF4yBYVztsgEuRUd+oMMv3/0ldSzRTCLi2ScVDjAQdh8OLVO5PxyNF/3q3u+TrbJ2TaSSTaH2ngMhDhQmsgAtQ3hisf93p+BDaL6LVgVPTK2op5HzAjXjLVdQu9Bfezu2LzF0ott5OP0hP68k5SlTYRgG5VhWKqjakRoIyh6Kv3Apun6z6RsF0SYkgxQkTd/5xhD1yeZtAeSzvZGRRW4kmve0Gg8xw0Y405cup9p39yAmtchzgdnND7exeJ8qo/RSp2wSkALuYj9vNwzEhou4q0wUOiPh61GRm1womA0O991Y319Gat8TxSJL5ule0uXVBqdgzuoq1R4zrDK5JxoYmsiJntsBi4TDgtf+Bzbe88knAqviAvTjC9hFhedRe5ptpl3GXAxeRcMWS2yyb3SFIKtnLPcbxkXLwF/a2PF7JedS25wY3H9PiweFQEHCCagtBc11yoNKxFQdnGF+uEuODgJ8afEHzIQu8Ivrcr3A39wDDLEG13UACYzcszLberK8aitQ0JNOWH0mi8AheBPQp12WSlAohLX20Nu9hTeGH6b5UcrZbs0g6S6M2Asj4eGIa6Jv3/NIT2h1wEmGt4gEzx+kf2gGpeOILuBFtvOWKKGCB/ZxVAHvj6RRJ22Se0scd5ac6iy7qeDPPoU6LJ/PTtombuPX3FfUHV/kFQ="
+    - secure: "T9SD/jg91nvvFDlZkI13b9CLVO3Bm/XQb/aw4r+fQC55IAnnjGCcu9kC6NZRxBa0LFsQf9g+xN9u4XMtd5KuWZMMU6xvTBIQ/58OVKc+Ndg5jfOKzH92GcOBwlG58qN1CybtOXeEs6IM8nmQ2GzjLeo+a1n55dERp7Zvhv5zaGt8DdK1Rf5YRgGwdvsn3N6iIEHT8Bql15446S9R4IJ8HsCTkBghaNiEbMElSgoCOy3omNYu4zDbNotuayHKwikXsd0dtMH8Q0OxEx/rWiAwqu5A5c9OvUiMIBKHAmaNSOnmuehMIBmnyLtXZj76IoJhS9AVSF0DuZ9ggAZBEZ8MvWcWUUVb6GSyMljHXIiKfYF/0C3C5XG1z3pHoJSvsR/XnjT/QS0y3SwMyGP6h9fVXfbk93hZQBtZ1Jtsc7KgdxU0siyuEhjdxJbRphgYCojEiFHzMyqQV4G8jQEqvWsgWukaznu62bxnV3gVZWRbfCbYlbsDXeXNMMUcUer2CTP3kc4H3ELhvnPdYdHsr/8JdEwPtSW1sUHBhNiDMPWHfhtcqu1r51RPVhScfIOPoxl5Iv78mOjHJKBRB0nUvI68iJjtt2NqhR1gLwj219P4mJ+N6Xa8TvlruEuqLdq1Ckvq7XYjdO6xufGrx22ZQ7D+OD4RGYRODCTDXCLBSHJuyBE="
+
+before_install:
+  - go get -u golang.org/x/lint/golint
+  - go get -u github.com/mitchellh/gox
+  - go get -u github.com/golang/dep/cmd/dep
+
+script:
+  - golint ./...
+  - dep init
+    # Gather info about this build
+  - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
+  - echo "version=$version"
+  - gitref=$(git describe --always)
+  - echo "gitref=$gitref"
+  - gitid=${gitref#g}
+  - echo "gitid=$gitid"
+  - branch=$(git show-ref | grep $gitid | head -1 | cut -d '/' -f3- | tr -cs '[0-9A-Za-z-]' '-')
+  - branch=${branch%-}
+  - echo "branch=$branch"
+  # Setup for versions to build
+  - publish_versions=(${branch}/${gitref}  ${branch})
+  # Check to see if this is a full release or just a development release
+  - if [ "$branch" = 'master' ]; then publish_versions=($version); fi
+  - echo "publish_versions=$publish_versions"
+  - go test -cpu=1,2 -v -tags integration ./...
+  - gox -ldflags="-X main.VERSION=$version" -osarch="darwin/amd64 linux/amd64 windows/amd64" -output="compiled/{{.Dir}}_{{.OS}}_{{.Arch}}"
+  # Publish the artifacts
+  - |
+    for binary in kubeauth_darwin_amd64 kubeauth_linux_amd64 kubeauth_windows_amd64.exe; do
+      # upload compiled/$binary to nexus
+        if [[ $binary =~ darwin ]]; then
+          platform="osx"
+          exec="kubeauth"
+        elif [[ $binary =~ linux ]]; then
+          platform="linux"
+          exec="kubeauth"
+        elif [[ $binary =~ windows ]]; then
+          platform="windows"
+          exec="kubeauth.exe"
+        else
+          platform="unknown"
+          exec="kubeauth"
+        fi
+        for dir in "${publish_versions[@]}"; do
+          echo "pushing ${dir}/${platform}/${exec}"
+          curl -u "${NX_USER}:${NX_PASS}" --upload-file compiled/$binary http://nexus.wt0f.com:8081/repository/kubeauth/${dir}/${platform}/${exec}
+        done
+    done
+

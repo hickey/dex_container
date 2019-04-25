@@ -1,4 +1,4 @@
-kubeauth
+kubeauth  [![Build Status](https://travis-ci.com/hickey/kubeauth.svg?branch=develop)](https://travis-ci.com/hickey/kubeauth)
 ========
 kubeauth is a packaging of the k8s-auth-example application and
 packaging of CoreOS Dex project to serve as an OpenID Connect

@@ -32,7 +32,6 @@ import (
 
 const (
     exampleAppState = "login"
-    releaseVersion  = "0.5.0"
 )
 
 type app struct {
@@ -41,6 +40,12 @@ type app struct {
     redirectURI  string
     kubeconfig   string
     debug        bool
+
+    issuerURL    string
+    listen       string
+    tlsCert      string
+    tlsKey       string
+    rootCAs      string
 
     verifier *oidc.IDTokenVerifier
     provider *oidc.Provider
@@ -95,6 +100,11 @@ type debugTransport struct {
     t http.RoundTripper
 }
 
+// Create a top level opbject to poss between fucntions
+var kubeauth app
+var VERSION string = "undefined"
+
+
 func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
     reqDump, err := httputil.DumpRequest(req, true)
     if err != nil {
@@ -119,143 +129,157 @@ func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
     return resp, nil
 }
 
-func cmd() *cobra.Command {
-    var (
-        a         app
-        issuerURL string
-        listen    string
-        tlsCert   string
-        tlsKey    string
-        rootCAs   string
-    )
-    c := cobra.Command{
-        Use:   "kubeauth",
-        Short: "Authenticates users against OIDC and writes the required kubeconfig.",
-        Long:  "",
-        RunE: func(cmd *cobra.Command, args []string) error {
-            u, err := url.Parse(a.redirectURI)
-            if err != nil {
-                raven.CaptureError(fmt.Errorf("parse redirect-uri: %v", err), nil)
-                return fmt.Errorf("parse redirect-uri: %v", err)
-            }
-            listenURL, err := url.Parse(listen)
-            if err != nil {
-                raven.CaptureError(fmt.Errorf("parse listen address: %v", err), nil)
-                return fmt.Errorf("parse listen address: %v", err)
-            }
-
-            if rootCAs != "" {
-                client, er := httpClientForRootCAs(rootCAs)
-                if er != nil {
-                    return err
-                }
-                a.client = client
-            }
-
-            if a.debug {
-                if a.client == nil {
-                    a.client = &http.Client{
-                        Transport: debugTransport{http.DefaultTransport},
-                    }
-                } else {
-                    a.client.Transport = debugTransport{a.client.Transport}
-                }
-            }
-
-            if a.client == nil {
-                a.client = http.DefaultClient
-            }
-
-            ctx := oidc.ClientContext(context.Background(), a.client)
-            provider, err := oidc.NewProvider(ctx, issuerURL)
-            if err != nil {
-                raven.CaptureErrorAndWait(fmt.Errorf("Failed to query provider %q: %v", issuerURL, err), nil)
-                return fmt.Errorf("Failed to query provider %q: %v", issuerURL, err)
-            }
-
-            var s struct {
-                // What scopes does a provider support?
-                //
-                // See: https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
-                ScopesSupported []string `json:"scopes_supported"`
-            }
-            if err := provider.Claims(&s); err != nil {
-                raven.CaptureError(fmt.Errorf("Failed to parse provider scopes_supported: %v", err), nil)
-                return fmt.Errorf("Failed to parse provider scopes_supported: %v", err)
-            }
-
-            if len(s.ScopesSupported) == 0 {
-                // scopes_supported is a "RECOMMENDED" discovery claim, not a required
-                // one. If missing, assume that the provider follows the spec and has
-                // an "offline_access" scope.
-                a.offlineAsScope = true
-            } else {
-                // See if scopes_supported has the "offline_access" scope.
-                a.offlineAsScope = func() bool {
-                    for _, scope := range s.ScopesSupported {
-                        if scope == oidc.ScopeOfflineAccess {
-                            return true
-                        }
-                    }
-                    return false
-                }()
-            }
-
-            a.provider = provider
-            a.verifier = provider.Verifier(&oidc.Config{ClientID: a.clientID})
-            a.shutdownChan = make(chan bool)
-
-            http.HandleFunc("/", a.handleLogin)
-            http.HandleFunc(u.Path, a.handleCallback)
-
-            switch listenURL.Scheme {
-            case "http":
-                log.Printf("listening on %s", listen)
-                go open(listen)
-                go a.waitShutdown()
-                return http.ListenAndServe(listenURL.Host, nil)
-            case "https":
-                log.Printf("listening on %s", listen)
-                go open(listen)
-                go a.waitShutdown()
-                return http.ListenAndServeTLS(listenURL.Host, tlsCert, tlsKey, nil)
-            default:
-                raven.CaptureError(fmt.Errorf("listen address %q is not using http or https", listen), nil)
-                return fmt.Errorf("listen address %q is not using http or https", listen)
-            }
-        },
-    }
-
-    // Configurable variables
-    c.Flags().StringVar(&a.clientID, "client-id", "kubernetes", "OAuth2 client ID of this application.")
-    c.Flags().StringVar(&a.clientSecret, "client-secret", "c3VwZXJzZWNyZXRzdHJpbmcK", "OAuth2 client secret of this application.")
-    c.Flags().StringVar(&a.redirectURI, "redirect-uri", "http://127.0.0.1:5555/callback", "Callback URL for OAuth2 responses.")
-    c.Flags().StringVar(&issuerURL, "issuer", "http://127.0.0.1:5556/dex", "URL of the OpenID Connect issuer.")
-    c.Flags().StringVar(&listen, "listen", "http://127.0.0.1:5555", "HTTP(S) address to listen at.")
-    c.Flags().StringVar(&tlsCert, "tls-cert", "", "X509 cert file to present when serving HTTPS.")
-    c.Flags().StringVar(&tlsKey, "tls-key", "", "Private key for the HTTPS cert.")
-    c.Flags().StringVar(&rootCAs, "issuer-root-ca", "", "Root certificate authorities for the issuer. Defaults to host certs.")
-    c.Flags().BoolVar(&a.debug, "debug", false, "Print all request and responses from the OpenID Connect issuer.")
-    c.Flags().StringVar(&a.kubeconfig, "kubeconfig", "", "Kubeconfig file to configure")
-    return &c
-}
 
 func init() {
     raven.SetDSN("https://dada174b5abe4b2fa787820b4286e178:53e54b07706245d3a5a8e61b14674fe9@sentry.io/1418609")
-    raven.SetRelease(fmt.Sprintf("kubeauth@%s", releaseVersion))
+    raven.SetRelease(fmt.Sprintf("kubeauth@%s", VERSION))
     raven.SetEnvironment("production")
 
 }
 
+var rootCmd = &cobra.Command {
+    Use:   "kubeauth",
+    Short: "Authenticates users against OIDC and writes the required kubeconfig.",
+    Long:  "",
+    RunE: func(cmd *cobra.Command, args []string) error {
+        kubeauth.startAuthentication()
+        return nil
+    },
+}
+
+var versionCmd = &cobra.Command{
+    Use: "version",
+    Short: "Display version of kubeauth",
+    Long: "",
+    RunE: func(cmd *cobra.Command, args []string) error {
+        fmt.Printf("Version: %s\n", VERSION)
+        return nil
+    },
+}
 
 func main() {
     raven.CapturePanic(func(){
-        if err := cmd().Execute(); err != nil {
+        // Configurable variables
+        rootCmd.Flags().StringVar(&kubeauth.clientID, "client-id", "kubernetes", "OAuth2 client ID of this application.")
+        rootCmd.Flags().StringVar(&kubeauth.clientSecret, "client-secret", "", "OAuth2 client secret of this application.")
+        rootCmd.Flags().StringVar(&kubeauth.redirectURI, "redirect-uri", "http://127.0.0.1:5555/callback", "Callback URL for OAuth2 responses.")
+        rootCmd.Flags().StringVar(&kubeauth.issuerURL, "issuer", "http://127.0.0.1:5556/dex", "URL of the OpenID Connect issuer.")
+        rootCmd.Flags().StringVar(&kubeauth.listen, "listen", "http://127.0.0.1:5555", "HTTP(S) address to listen at.")
+        rootCmd.Flags().StringVar(&kubeauth.tlsCert, "tls-cert", "", "X509 cert file to present when serving HTTPS.")
+        rootCmd.Flags().StringVar(&kubeauth.tlsKey, "tls-key", "", "Private key for the HTTPS cert.")
+        rootCmd.Flags().StringVar(&kubeauth.rootCAs, "issuer-root-ca", "", "Root certificate authorities for the issuer. Defaults to host certs.")
+        rootCmd.Flags().BoolVar(&kubeauth.debug, "debug", false, "Print all request and responses from the OpenID Connect issuer.")
+        rootCmd.Flags().StringVar(&kubeauth.kubeconfig, "kubeconfig", "", "Kubeconfig file to configure")
+
+        rootCmd.AddCommand(versionCmd)
+
+        if err := rootCmd.Execute(); err != nil {
             fmt.Fprintf(os.Stderr, "error: %v\n", err)
             os.Exit(2)
         }
     }, nil)
 }
+
+func (a *app) startAuthentication() error {
+
+    u, err := url.Parse(a.redirectURI)
+    if err != nil {
+        raven.CaptureError(fmt.Errorf("parse redirect-uri: %v", err), nil)
+        return fmt.Errorf("parse redirect-uri: %v", err)
+    }
+    listenURL, err := url.Parse(a.listen)
+    if err != nil {
+        raven.CaptureError(fmt.Errorf("parse listen address: %v", err), nil)
+        return fmt.Errorf("parse listen address: %v", err)
+    }
+
+    if a.rootCAs != "" {
+        client, er := httpClientForRootCAs(a.rootCAs)
+        if er != nil {
+            return err
+        }
+        a.client = client
+    }
+
+    // Set the default client-secret. Doing this here allows the secret
+    // to be in the code but not display it in the help text
+    if a.clientSecret == "" {
+        a.clientSecret = "BIX5uwOiGg8TJMCpB4g2TyTn"
+    }
+
+    if a.debug {
+        if a.client == nil {
+            a.client = &http.Client{
+                Transport: debugTransport{http.DefaultTransport},
+            }
+        } else {
+            a.client.Transport = debugTransport{a.client.Transport}
+        }
+    }
+
+    if a.client == nil {
+        a.client = http.DefaultClient
+    }
+
+    ctx := oidc.ClientContext(context.Background(), a.client)
+    provider, err := oidc.NewProvider(ctx, a.issuerURL)
+    if err != nil {
+        raven.CaptureErrorAndWait(fmt.Errorf("Failed to query provider %q: %v", a.issuerURL, err), nil)
+        return fmt.Errorf("Failed to query provider %q: %v", a.issuerURL, err)
+    }
+
+    var s struct {
+        // What scopes does a provider support?
+        //
+        // See: https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderMetadata
+        ScopesSupported []string `json:"scopes_supported"`
+    }
+    if err := provider.Claims(&s); err != nil {
+        raven.CaptureError(fmt.Errorf("Failed to parse provider scopes_supported: %v", err), nil)
+        return fmt.Errorf("Failed to parse provider scopes_supported: %v", err)
+    }
+
+    if len(s.ScopesSupported) == 0 {
+        // scopes_supported is a "RECOMMENDED" discovery claim, not a required
+        // one. If missing, assume that the provider follows the spec and has
+        // an "offline_access" scope.
+        a.offlineAsScope = true
+    } else {
+        // See if scopes_supported has the "offline_access" scope.
+        a.offlineAsScope = func() bool {
+            for _, scope := range s.ScopesSupported {
+                if scope == oidc.ScopeOfflineAccess {
+                    return true
+                }
+            }
+            return false
+        }()
+    }
+
+    a.provider = provider
+    a.verifier = provider.Verifier(&oidc.Config{ClientID: a.clientID})
+    a.shutdownChan = make(chan bool)
+
+    http.HandleFunc("/", a.handleLogin)
+    http.HandleFunc(u.Path, a.handleCallback)
+
+    switch listenURL.Scheme {
+    case "http":
+        log.Printf("listening on %s", a.listen)
+        go open(a.listen)
+        go a.waitShutdown()
+        return http.ListenAndServe(listenURL.Host, nil)
+    case "https":
+        log.Printf("listening on %s", a.listen)
+        go open(a.listen)
+        go a.waitShutdown()
+        return http.ListenAndServeTLS(listenURL.Host, a.tlsCert, a.tlsKey, nil)
+    default:
+        raven.CaptureError(fmt.Errorf("listen address %q is not using http or https", a.listen), nil)
+        return fmt.Errorf("listen address %q is not using http or https", a.listen)
+    }
+}
+
 
 func (a *app) oauth2Config(scopes []string) *oauth2.Config {
     return &oauth2.Config{
