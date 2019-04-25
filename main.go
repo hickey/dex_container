@@ -32,6 +32,7 @@ import (
 
 const (
     exampleAppState = "login"
+    VERSION         = "undefined"
 )
 
 type app struct {
@@ -151,7 +152,7 @@ var versionCmd = &cobra.Command{
     Short: "Display version of kubeauth",
     Long: "",
     RunE: func(cmd *cobra.Command, args []string) error {
-        fmt.Printf("Version: %s\n", releaseVersion)
+        fmt.Printf("Version: %s\n", VERSION)
         return nil
     },
 }
