@@ -130,6 +130,29 @@ func (d debugTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 }
 
 
+var rootCmd = &cobra.Command {
+    Use  : "kubeauth",
+    Short: "Authenticates users against OIDC and writes the required kubeconfig.",
+    Long : "",
+    RunE : func(cmd *cobra.Command, args []string) error {
+        kubeauth.startAuthentication()
+        return nil
+    },
+}
+
+var versionCmd = &cobra.Command {
+    Use  : "version",
+    Short: "Display version of kubeauth",
+    Long : "",
+    RunE : func(cmd *cobra.Command, args []string) error {
+        fmt.Printf("Version: %s\n", VERSION)
+        return nil
+    },
+}
+
+
+
+
 func init() {
     raven.SetDSN("https://dada174b5abe4b2fa787820b4286e178:53e54b07706245d3a5a8e61b14674fe9@sentry.io/1418609")
     raven.SetRelease(fmt.Sprintf("kubeauth@%s", VERSION))
@@ -137,24 +160,46 @@ func init() {
 
 }
 
-var rootCmd = &cobra.Command {
-    Use:   "kubeauth",
-    Short: "Authenticates users against OIDC and writes the required kubeconfig.",
-    Long:  "",
-    RunE: func(cmd *cobra.Command, args []string) error {
-        kubeauth.startAuthentication()
-        return nil
-    },
-}
+func initSiteCmd() *cobra.Command {
+    var siteCmd = &cobra.Command {
+        Use  : "site",
+        Short: "Add, remove, or modify a site alias",
+        Long : "",
+    }
 
-var versionCmd = &cobra.Command{
-    Use: "version",
-    Short: "Display version of kubeauth",
-    Long: "",
-    RunE: func(cmd *cobra.Command, args []string) error {
-        fmt.Printf("Version: %s\n", VERSION)
-        return nil
-    },
+    siteCmd.AddCommand(&cobra.Command {
+        Use: "add",
+        Short: "Add a site alias",
+        RunE: func(cmd *cobra.Command, args []string) error {
+            return kubeauth.siteAliasAdd(args)
+        },
+    })
+
+    siteCmd.AddCommand(&cobra.Command {
+        Use: "remove",
+        Short: "Remove a site alias",
+        RunE: func(cmd *cobra.Command, args []string) error {
+            return kubeauth.siteAliasRemove(args)
+        },
+    })
+
+    siteCmd.AddCommand(&cobra.Command {
+        Use: "list",
+        Short: "List all avaliable aliases",
+        RunE: func(cmd *cobra.Command, args []string) error {
+            return kubeauth.siteAliasList(args)
+        },
+    })
+
+    siteCmd.AddCommand(&cobra.Command {
+        Use: "modify",
+        Short: "Modify a site alias",
+        RunE: func(cmd *cobra.Command, args []string) error {
+            return kubeauth.siteAliasModify(args)
+        },
+    })
+
+    return siteCmd
 }
 
 func main() {
@@ -172,6 +217,7 @@ func main() {
         rootCmd.Flags().StringVar(&kubeauth.kubeconfig, "kubeconfig", "", "Kubeconfig file to configure")
 
         rootCmd.AddCommand(versionCmd)
+        rootCmd.AddCommand(initSiteCmd())
 
         if err := rootCmd.Execute(); err != nil {
             fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -425,6 +471,23 @@ func (a *app) waitShutdown() {
     }
 }
 
+func (a *app) siteAliasList(args []string) error {
+    listKubeConfigSiteAliases(kubeauth.kubeconfig)
+    return nil
+}
+
+func (a *app) siteAliasAdd(args []string) error {
+    return nil
+}
+
+func (a *app) siteAliasRemove(args []string) error {
+    return nil
+}
+
+func (a *app) siteAliasModify(args []string) error {
+    return nil
+}
+
 func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim, a *app) error {
     var config *k8s_api.Config
     var outputFilename string
@@ -535,6 +598,30 @@ func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim
 //     }
 //     return nil
 // }
+
+func listKubeConfigSiteAliases(kubeConfig string) []string {
+    var config *k8s_api.Config
+    var err error
+
+    clientConfigLoadingRules := k8s_client.NewDefaultClientConfigLoadingRules()
+
+    if kubeConfig != "" {
+        return make([]string, 0)
+    } else {
+        config, err = clientConfigLoadingRules.Load()
+        if err != nil {
+            raven.CaptureError(err, nil)
+            return make([]string, 0)
+        }
+    }
+    prefInfo := k8s_api.NewPreferences()
+
+    fmt.Printf("%v\n\n", config)
+
+    fmt.Printf("%v\n\n", prefInfo)
+
+    return make([]string, 0)
+}
 
 func open(url string) error {
 
