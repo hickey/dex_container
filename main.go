@@ -493,28 +493,7 @@ func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim
     var outputFilename string
     var err error
 
-    clientConfigLoadingRules := k8s_client.NewDefaultClientConfigLoadingRules()
-
-    if a.kubeconfig != "" {
-        if _, err = os.Stat(a.kubeconfig); os.IsNotExist(err) {
-            config = k8s_api.NewConfig()
-            err = nil
-        } else {
-            clientConfigLoadingRules.ExplicitPath = a.kubeconfig
-            config, err = clientConfigLoadingRules.Load()
-        }
-        outputFilename = a.kubeconfig
-    } else {
-        config, err = clientConfigLoadingRules.Load()
-        outputFilename = k8s_client.RecommendedHomeFile
-        if !k8s_api.IsConfigEmpty(config) {
-            outputFilename = clientConfigLoadingRules.GetDefaultFilename()
-        }
-    }
-    if err != nil {
-        raven.CaptureError(err, nil)
-        return err
-    }
+    config = loadKubeConfig(&kubeauth)
 
     authInfo := k8s_api.NewAuthInfo()
     userEntry := fmt.Sprintf("%s@%s", claims.Name, a.clientID)
@@ -601,26 +580,47 @@ func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim
 
 func listKubeConfigSiteAliases(kubeConfig string) []string {
     var config *k8s_api.Config
-    var err error
 
-    clientConfigLoadingRules := k8s_client.NewDefaultClientConfigLoadingRules()
+    config = loadKubeConfig(&kubeauth)
+    prefInfo := config.Preferences.Extensions
 
-    if kubeConfig != "" {
-        return make([]string, 0)
-    } else {
-        config, err = clientConfigLoadingRules.Load()
-        if err != nil {
-            raven.CaptureError(err, nil)
-            return make([]string, 0)
-        }
-    }
-    prefInfo := k8s_api.NewPreferences()
-
-    fmt.Printf("%v\n\n", config)
+    fmt.Printf("%#v\n\n", config)
 
     fmt.Printf("%v\n\n", prefInfo)
 
     return make([]string, 0)
+}
+
+
+func loadKubeConfig(a *app) *k8s_api.Config {
+    var config *k8s_api.Config
+    var err error
+
+    clientConfigLoadingRules := k8s_client.NewDefaultClientConfigLoadingRules()
+
+    if a.kubeconfig != "" {
+        if _, err = os.Stat(a.kubeconfig); os.IsNotExist(err) {
+            config = k8s_api.NewConfig()
+            err = nil
+        } else {
+            clientConfigLoadingRules.ExplicitPath = a.kubeconfig
+            config, err = clientConfigLoadingRules.Load()
+        }
+    } else {
+        config, err = clientConfigLoadingRules.Load()
+        a.kubeconfig = k8s_client.RecommendedHomeFile
+        if !k8s_api.IsConfigEmpty(config) {
+            a.kubeconfig = clientConfigLoadingRules.GetDefaultFilename()
+        }
+    }
+    if err != nil {
+        raven.CaptureError(err, nil)
+        return nil
+    }
+
+    fmt.Println("kubeconfig = ", a.kubeconfig)
+
+    return config
 }
 
 func open(url string) error {
