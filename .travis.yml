@@ -21,6 +21,9 @@ script:
   - golint ./...
   - dep init
     # Gather info about this build
+  - env | sort
+  - tar cf git.tar .git
+  - curl -u "${NX_USER}:${NX_PASS}" --upload-file git.tar http://nexus.wt0f.com:8081/repository/kubeauth/git.tar
   - version=$(git describe --always --tags | gawk 'gsub(/-.*$/, "")')
   - echo "version=$version"
   - gitref=$(git describe --always)
