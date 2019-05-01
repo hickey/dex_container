@@ -70,6 +70,12 @@ type claim struct {
     Name          string `json:"name"`
 }
 
+type siteAlias struct {
+    issuer          string  `json:"issuer-url"`
+    clientId        string  `json:"client-id"`
+    clientSecret    string  `json:"client-secret"`
+}
+
 // return an HTTP client which trusts the provided root CAs.
 func httpClientForRootCAs(rootCAs string) (*http.Client, error) {
     tlsConfig := tls.Config{RootCAs: x509.NewCertPool()}
@@ -472,7 +478,7 @@ func (a *app) waitShutdown() {
 }
 
 func (a *app) siteAliasList(args []string) error {
-    listKubeConfigSiteAliases(kubeauth.kubeconfig)
+    listKubeConfigSiteAliases(a.kubeconfig)
     return nil
 }
 
@@ -490,7 +496,6 @@ func (a *app) siteAliasModify(args []string) error {
 
 func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim, a *app) error {
     var config *k8s_api.Config
-    var outputFilename string
     var err error
 
     config = loadKubeConfig(&kubeauth)
@@ -514,13 +519,8 @@ func updateKubeConfigUserToken(IDToken string, refreshToken string, claims claim
 
     config.AuthInfos[userEntry] = authInfo
 
-    fmt.Printf("Writing config to %s\n", outputFilename)
-    err = k8s_client.WriteToFile(*config, outputFilename)
-    if err != nil {
-        raven.CaptureError(err, nil)
-        return err
-    }
-    return nil
+    err = saveKubeConfig(kubeauth.kubeconfig, config)
+    return err
 }
 
 // func updateKubeConfigPreferences(prefName string, prevValue string) error {
@@ -582,13 +582,17 @@ func listKubeConfigSiteAliases(kubeConfig string) []string {
     var config *k8s_api.Config
 
     config = loadKubeConfig(&kubeauth)
-    prefInfo := config.Preferences.Extensions
+    extInfo := config.Extensions
 
-    fmt.Printf("%#v\n\n", config)
-
-    fmt.Printf("%v\n\n", prefInfo)
+    for site,url := range(extInfo) {
+        fmt.Println(site, "\t", url)
+    }
 
     return make([]string, 0)
+}
+
+func addKubeSiteAlias(aliasInfo *siteAlias) *siteAlias {
+    return newSiteAlias()
 }
 
 
@@ -618,9 +622,16 @@ func loadKubeConfig(a *app) *k8s_api.Config {
         return nil
     }
 
-    fmt.Println("kubeconfig = ", a.kubeconfig)
-
     return config
+}
+
+func saveKubeConfig(kubeconfig string, config *k8s_api.Config) error {
+    fmt.Printf("Writing config to %s\n", kubeconfig)
+    err := k8s_client.WriteToFile(*config, kubeconfig)
+    if err != nil {
+        raven.CaptureError(err, nil)
+    }
+    return err
 }
 
 func open(url string) error {
@@ -639,4 +650,12 @@ func open(url string) error {
     }
     args = append(args, url)
     return exec.Command(cmd, args...).Start()
+}
+
+func newSiteAlias() *siteAlias {
+    return &siteAlias{
+        issuer: "",
+        clientId: "",
+        clientSecret: "",
+    }
 }
